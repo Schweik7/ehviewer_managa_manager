@@ -1,11 +1,21 @@
 """ADB操作封装: 设备检测、数据库拉取/推送、漫画目录操作。"""
 
+import os
+import shutil
 import subprocess
 import platform
 from datetime import datetime
 from typing import List
 
 from .config import EXPORT_DB_DIR, DOWNLOAD_DIR
+
+# Windows中文系统默认GBK编码会导致解析adb(UTF-8输出)时出错, 统一指定UTF-8
+_SUBPROCESS_KWARGS = dict(
+    capture_output=True,
+    text=True,
+    encoding="utf-8",
+    errors="replace",
+)
 
 
 class ADBManager:
@@ -21,7 +31,7 @@ class ADBManager:
 
     def check_adb(self) -> bool:
         try:
-            subprocess.run(["adb", "version"], capture_output=True, text=True, check=True)
+            subprocess.run(["adb", "version"], **_SUBPROCESS_KWARGS, check=True)
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             print("错误: 未找到 adb 命令，请确认 Android SDK Platform-Tools 已安装并在 PATH 中")
@@ -29,9 +39,7 @@ class ADBManager:
 
     def check_device(self) -> bool:
         try:
-            result = subprocess.run(
-                ["adb", "devices"], capture_output=True, text=True, check=True
-            )
+            result = subprocess.run(["adb", "devices"], **_SUBPROCESS_KWARGS, check=True)
             lines = result.stdout.strip().split("\n")
             devices = [
                 line.split("\t")[0] for line in lines[1:] if "\tdevice" in line
@@ -62,8 +70,7 @@ class ADBManager:
         try:
             result = subprocess.run(
                 ["adb", "shell", "ls", "-t", EXPORT_DB_DIR],
-                capture_output=True,
-                text=True,
+                **_SUBPROCESS_KWARGS,
             )
 
             if result.returncode != 0:
@@ -90,8 +97,7 @@ class ADBManager:
 
             subprocess.run(
                 ["adb", "pull", remote_path, local_path],
-                capture_output=True,
-                text=True,
+                **_SUBPROCESS_KWARGS,
                 check=True,
             )
 
@@ -114,8 +120,7 @@ class ADBManager:
 
             subprocess.run(
                 ["adb", "push", local_db_path, remote_path],
-                capture_output=True,
-                text=True,
+                **_SUBPROCESS_KWARGS,
                 check=True,
             )
 
@@ -137,8 +142,7 @@ class ADBManager:
         try:
             result = subprocess.run(
                 ["adb", "shell", "ls", "-1", DOWNLOAD_DIR],
-                capture_output=True,
-                text=True,
+                **_SUBPROCESS_KWARGS,
                 check=True,
             )
             return [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
@@ -150,25 +154,48 @@ class ADBManager:
         """
         从手机拉取单个漫画目录到本地。
 
+        adb 在 Windows 上无法处理目标路径中的非 ASCII 字符（中文等），
+        因此统一先拉到 ASCII 安全的临时目录，再用 Python 重命名到最终路径。
+        NTFS 原生支持 Unicode 文件名，重命名不受此限制。
+
         Args:
-            remote_dirname: 手机上的目录名 (可含特殊字符, 作为Android路径使用)
-            local_dest_path: 本地目标路径 (调用方负责确保此路径在当前OS上合法)
+            remote_dirname:  手机上的目录名 (可含特殊字符, 作为Android路径使用)
+            local_dest_path: 本地目标路径 (已由调用方做过Windows非法字符净化)
         """
         source = f"{DOWNLOAD_DIR}/{remote_dirname}"
+        parent_dir = os.path.dirname(local_dest_path)
+        local_basename = os.path.basename(local_dest_path)
+
+        # 提取 GID (dirname格式为 "<GID>-<title>") 构造 ASCII 临时目录名
+        gid_part = local_basename.split("-")[0] if "-" in local_basename else local_basename[:12]
+        temp_path = os.path.join(parent_dir, f"_pull_tmp_{gid_part}")
+
+        # 清理可能的残留临时目录
+        if os.path.exists(temp_path):
+            shutil.rmtree(temp_path, ignore_errors=True)
+
         try:
             result = subprocess.run(
-                ["adb", "pull", source, local_dest_path],
-                capture_output=True,
-                text=True,
+                ["adb", "pull", source, temp_path],
+                **_SUBPROCESS_KWARGS,
             )
             if result.returncode != 0:
-                stderr = result.stderr.strip() or result.stdout.strip()
+                stderr = (result.stderr.strip() or result.stdout.strip()).split("\n")[0]
                 print(f"  拉取失败: {stderr}")
+                shutil.rmtree(temp_path, ignore_errors=True)
                 return False
+
+            # 重命名到最终目标路径 (NTFS 支持 Unicode)
+            if os.path.exists(local_dest_path):
+                shutil.rmtree(local_dest_path)
+            os.rename(temp_path, local_dest_path)
+
             print(f"  已拉取到: {local_dest_path}")
             return True
-        except subprocess.CalledProcessError as e:
-            print(f"  拉取失败: {e}")
+
+        except OSError as e:
+            print(f"  文件操作失败: {e}")
+            shutil.rmtree(temp_path, ignore_errors=True)
             return False
 
     def remove_manga_dir(self, manga_dirname: str) -> bool:
@@ -177,8 +204,7 @@ class ADBManager:
         try:
             subprocess.run(
                 ["adb", "shell", f'rm -rf "{source}"'],
-                capture_output=True,
-                text=True,
+                **_SUBPROCESS_KWARGS,
                 check=True,
             )
             print(f"  已从手机删除: {manga_dirname}")
@@ -193,8 +219,7 @@ class ADBManager:
         try:
             result = subprocess.run(
                 ["adb", "shell", f'test -d "{source}"'],
-                capture_output=True,
-                text=True,
+                **_SUBPROCESS_KWARGS,
             )
             return result.returncode == 0
         except subprocess.CalledProcessError:
@@ -205,8 +230,7 @@ class ADBManager:
         try:
             result = subprocess.run(
                 ["adb", "pull", remote_path, local_path],
-                capture_output=True,
-                text=True,
+                **_SUBPROCESS_KWARGS,
             )
             return result.returncode == 0
         except subprocess.CalledProcessError:

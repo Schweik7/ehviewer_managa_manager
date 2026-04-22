@@ -16,6 +16,11 @@ import os
 import sys
 import argparse
 
+# Windows终端UTF-8输出修复
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from ehviewer.config import DEFAULT_THRESHOLD, STATE_NAMES
 from ehviewer.manager import MangaManager
 
@@ -102,7 +107,7 @@ def cmd_move(manager: MangaManager, args) -> int:
         print("  将同步更新EhViewer数据库记录")
     print(f"{'='*60}")
 
-    if not dry_run:
+    if not dry_run and not args.yes:
         response = input("\n确认继续? (y/N): ")
         if response.lower() != "y":
             print("已取消")
@@ -243,6 +248,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_move.add_argument(
         "--dry-run", action="store_true",
         help="仅预演, 打印操作计划但不执行实际操作",
+    )
+    p_move.add_argument(
+        "--yes", "-y", action="store_true",
+        help="跳过确认提示直接执行 (用于脚本/管道调用)",
     )
 
     # clean
