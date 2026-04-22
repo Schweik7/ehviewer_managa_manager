@@ -277,8 +277,15 @@ def main() -> int:
     args = parser.parse_args()
 
     if not args.command:
-        parser.print_help()
-        return 1
+        # 无子命令 → 启动 GUI
+        try:
+            from ehviewer.gui import run_gui
+            return run_gui()
+        except ImportError as e:
+            print(f"GUI 启动失败 (需要 PyQt5): {e}")
+            print("命令行用法:")
+            parser.print_help()
+            return 1
 
     # check-names 只需要数据库, 不需要检测手机目录
     # 但仍需初始化(拉取数据库)
