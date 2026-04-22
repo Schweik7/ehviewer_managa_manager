@@ -10,20 +10,39 @@ from typing import Optional, List
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot, QObject, QSize
 from PyQt5.QtGui import QFont, QTextCursor, QColor, QPalette
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QGridLayout, QLabel, QPushButton, QLineEdit, QSpinBox, QDoubleSpinBox,
-    QCheckBox, QTabWidget, QTextEdit, QFileDialog, QGroupBox,
-    QTableWidget, QTableWidgetItem, QHeaderView, QProgressBar,
-    QSplitter, QFrame, QMessageBox, QSizePolicy,
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QGridLayout,
+    QLabel,
+    QPushButton,
+    QLineEdit,
+    QSpinBox,
+    QDoubleSpinBox,
+    QCheckBox,
+    QTabWidget,
+    QTextEdit,
+    QFileDialog,
+    QGroupBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
+    QProgressBar,
+    QSplitter,
+    QFrame,
+    QMessageBox,
+    QSizePolicy,
 )
 
 from .config import DEFAULT_THRESHOLD
 from .manager import MangaManager
 
-
 # ---------------------------------------------------------------------------
 # 工具函数
 # ---------------------------------------------------------------------------
+
 
 def _set_bg(widget, r: int, g: int, b: int):
     """通过 palette 设置控件背景色，不触发 QSS 子控件样式重算。"""
@@ -36,6 +55,7 @@ def _set_bg(widget, r: int, g: int, b: int):
 # ---------------------------------------------------------------------------
 # 帮助提示小标签
 # ---------------------------------------------------------------------------
+
 
 def _tip(tooltip: str) -> QLabel:
     lbl = QLabel("?")
@@ -55,10 +75,11 @@ def _tip(tooltip: str) -> QLabel:
 # 工作线程
 # ---------------------------------------------------------------------------
 
+
 class WorkerSignals(QObject):
-    log      = pyqtSignal(str, str)
+    log = pyqtSignal(str, str)
     finished = pyqtSignal(object)
-    error    = pyqtSignal(str)
+    error = pyqtSignal(str)
 
 
 class BaseWorker(QThread):
@@ -73,6 +94,7 @@ class BaseWorker(QThread):
     def _init_manager(self) -> bool:
         self._manager = MangaManager()
         import builtins
+
         orig = builtins.print
 
         def gui_print(*args, **kwargs):
@@ -123,6 +145,7 @@ class AnalyzeWorker(BaseWorker):
 
     def run(self):
         import builtins
+
         orig = builtins.print
 
         def gui_print(*args, **kwargs):
@@ -143,20 +166,27 @@ class AnalyzeWorker(BaseWorker):
 
 
 class MoveWorker(BaseWorker):
-    def __init__(self, manager: MangaManager, results: list,
-                 dest_dir: str, remove: bool, sync_db: bool):
+    def __init__(
+        self,
+        manager: MangaManager,
+        results: list,
+        dest_dir: str,
+        remove: bool,
+        sync_db: bool,
+    ):
         super().__init__()
         self._manager = manager
-        self.results   = results
-        self.dest_dir  = dest_dir
-        self.remove    = remove
-        self.sync_db   = sync_db
+        self.results = results
+        self.dest_dir = dest_dir
+        self.remove = remove
+        self.sync_db = sync_db
 
     def _init_manager(self) -> bool:
         return True
 
     def run(self):
         import builtins
+
         orig = builtins.print
 
         def gui_print(*args, **kwargs):
@@ -177,7 +207,8 @@ class MoveWorker(BaseWorker):
             moved, failed = [], []
             for manga in self.results:
                 ok = self._manager.move_manga_to_pc(
-                    manga, self.dest_dir,
+                    manga,
+                    self.dest_dir,
                     remove_from_phone=self.remove,
                     dry_run=False,
                 )
@@ -199,6 +230,7 @@ class MoveWorker(BaseWorker):
 # ---------------------------------------------------------------------------
 # 日志组件
 # ---------------------------------------------------------------------------
+
 
 class LogWidget(QTextEdit):
     COLORS = {"info": "#d8d8d8", "ok": "#6fcf6f", "warn": "#f0c040", "error": "#f07070"}
@@ -227,9 +259,10 @@ class LogWidget(QTextEdit):
 # 选项卡: 移动漫画
 # ---------------------------------------------------------------------------
 
+
 class MoveTab(QWidget):
     request_analyze = pyqtSignal(float)
-    request_move    = pyqtSignal(list, str, bool, bool)
+    request_move = pyqtSignal(list, str, bool, bool)
 
     def __init__(self):
         super().__init__()
@@ -274,8 +307,7 @@ class MoveTab(QWidget):
         self.threshold_spin.setDecimals(2)
         self.threshold_spin.setFixedWidth(96)
         _thr_tip = _tip(
-            "只有阅读完成度 ≥ 此比例的漫画才会进入列表\n"
-            "例如 0.90 = 已读超过 90%"
+            "只有阅读完成度 ≥ 此比例的漫画才会进入列表\n" "例如 0.90 = 已读超过 90%"
         )
         self.threshold_spin.setToolTip(_thr_tip.toolTip())
 
@@ -308,17 +340,12 @@ class MoveTab(QWidget):
         row2.setSpacing(6)
 
         self.remove_chk = QCheckBox("移动后删除手机原文件")
-        _rm_tip = _tip(
-            "漫画拉取成功后自动删除手机上\n"
-            "对应的文件夹，释放手机存储"
-        )
+        _rm_tip = _tip("漫画拉取成功后自动删除手机上\n" "对应的文件夹，释放手机存储")
         self.remove_chk.setToolTip(_rm_tip.toolTip())
 
         self.sync_chk = QCheckBox("同步更新 EhViewer 数据库")
         _sync_tip = _tip(
-            "从数据库删除已移走的条目并\n"
-            "推送回手机，App 将不再显示\n"
-            "已移走的漫画"
+            "从数据库删除已移走的条目并\n" "推送回手机，App 将不再显示\n" "已移走的漫画"
         )
         self.sync_chk.setToolTip(_sync_tip.toolTip())
 
@@ -358,8 +385,7 @@ class MoveTab(QWidget):
         self.dryrun_btn.setMinimumWidth(110)
         self.dryrun_btn.setEnabled(False)
         self.dryrun_btn.setToolTip(
-            "预览将被移动的漫画列表（Dry Run）\n"
-            "不执行任何实际文件操作"
+            "预览将被移动的漫画列表（Dry Run）\n" "不执行任何实际文件操作"
         )
         self.dryrun_btn.clicked.connect(self._on_dryrun)
 
@@ -408,6 +434,7 @@ class MoveTab(QWidget):
         for m in items:
             lines.append(f"  {m['title'][:70]}  ({m['progress']*100:.0f}%)")
         from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QTextEdit as TE
+
         dlg = QDialog(self)
         dlg.setWindowTitle("Dry Run 预览")
         dlg.resize(720, 440)
@@ -432,17 +459,21 @@ class MoveTab(QWidget):
             return
         batch = self.batch_spin.value()
         items = self._results[:batch] if batch > 0 else self._results
-        if QMessageBox.question(
-            self, "确认移动",
-            f"即将移动 {len(items)} 个漫画到:\n{dest}\n\n"
-            f"删除手机原文件: {'是' if self.remove_chk.isChecked() else '否'}\n"
-            f"同步数据库:    {'是' if self.sync_chk.isChecked() else '否'}\n\n继续?",
-            QMessageBox.Yes | QMessageBox.No,
-        ) != QMessageBox.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                "确认移动",
+                f"即将移动 {len(items)} 个漫画到:\n{dest}\n\n"
+                f"删除手机原文件: {'是' if self.remove_chk.isChecked() else '否'}\n"
+                f"同步数据库:    {'是' if self.sync_chk.isChecked() else '否'}\n\n继续?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            != QMessageBox.Yes
+        ):
             return
-        self.request_move.emit(items, dest,
-                               self.remove_chk.isChecked(),
-                               self.sync_chk.isChecked())
+        self.request_move.emit(
+            items, dest, self.remove_chk.isChecked(), self.sync_chk.isChecked()
+        )
 
     def set_results(self, results: List[dict]):
         self._results = results
@@ -472,6 +503,7 @@ class MoveTab(QWidget):
 # 选项卡: 分析结果
 # ---------------------------------------------------------------------------
 
+
 class AnalyzeTab(QWidget):
     def __init__(self):
         super().__init__()
@@ -484,10 +516,18 @@ class AnalyzeTab(QWidget):
         self.table = QTableWidget(0, 5)
         self.table.setHorizontalHeaderLabels(["GID", "标题", "进度", "页数", "状态"])
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            3, QHeaderView.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            4, QHeaderView.ResizeToContents
+        )
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -498,23 +538,23 @@ class AnalyzeTab(QWidget):
     def populate(self, results: List[dict]):
         self.table.setRowCount(0)
         n = len(results)
-        self.info_lbl.setText(
-            f"共 {n} 个达标漫画" if n else "暂无达标漫画"
-        )
+        self.info_lbl.setText(f"共 {n} 个达标漫画" if n else "暂无达标漫画")
         for r in results:
             row = self.table.rowCount()
             self.table.insertRow(row)
             self.table.setItem(row, 0, QTableWidgetItem(str(r["gid"])))
             self.table.setItem(row, 1, QTableWidgetItem(r["title"]))
             self.table.setItem(row, 2, QTableWidgetItem(f"{r['progress']*100:.1f}%"))
-            self.table.setItem(row, 3, QTableWidgetItem(
-                f"{r['current_page']+1}/{r['total_pages']}"))
+            self.table.setItem(
+                row, 3, QTableWidgetItem(f"{r['current_page']+1}/{r['total_pages']}")
+            )
             self.table.setItem(row, 4, QTableWidgetItem(r["state_text"]))
 
 
 # ---------------------------------------------------------------------------
 # 选项卡: 文件名检查
 # ---------------------------------------------------------------------------
+
 
 class FilenameTab(QWidget):
     def __init__(self):
@@ -531,7 +571,7 @@ class FilenameTab(QWidget):
         self.check_btn.setFixedHeight(36)
         self.check_btn.setToolTip(
             "扫描所有漫画目录名中含有 Windows 非法字符\n"
-            "（: * ? \" < > |）的条目，移动时自动净化"
+            '（: * ? " < > |）的条目，移动时自动净化'
         )
         top_row.addWidget(self.label)
         top_row.addStretch()
@@ -542,7 +582,9 @@ class FilenameTab(QWidget):
         self.table.setHorizontalHeaderLabels(["GID", "原始目录名", "净化后目录名"])
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeToContents
+        )
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().setDefaultSectionSize(30)
@@ -569,6 +611,7 @@ class FilenameTab(QWidget):
 # 主窗口
 # ---------------------------------------------------------------------------
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -576,7 +619,7 @@ class MainWindow(QMainWindow):
         self.resize(1200, 760)
         self.setMinimumSize(900, 580)
         self._manager: Optional[MangaManager] = None
-        self._worker:  Optional[QThread] = None
+        self._worker: Optional[QThread] = None
         self._results: List[dict] = []
         self._build_ui()
         self._auto_connect()
@@ -596,14 +639,16 @@ class MainWindow(QMainWindow):
         bar.setObjectName("topBar")
         # 下边框用 setStyleSheet 只作用于 QFrame 本身，不影响子控件
         bar.setStyleSheet("QFrame#topBar { border-bottom: 1px solid #2e4050; }")
-        _set_bg(bar, 0x1e, 0x2a, 0x35)
+        _set_bg(bar, 0x1E, 0x2A, 0x35)
 
         bar_lay = QHBoxLayout(bar)
         bar_lay.setContentsMargins(14, 0, 14, 0)
         bar_lay.setSpacing(10)
 
         self.conn_lbl = QLabel("● 未连接")
-        self.conn_lbl.setStyleSheet("color:#f07070; font-weight:bold; font-size:11pt; background:transparent;")
+        self.conn_lbl.setStyleSheet(
+            "color:#f07070; font-weight:bold; font-size:11pt; background:transparent;"
+        )
         # 防止设备 ID 过长时把右侧按钮挤出视野
         self.conn_lbl.setMaximumWidth(520)
         self.conn_lbl.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
@@ -617,7 +662,7 @@ class MainWindow(QMainWindow):
             "QProgressBar::chunk{background:#3a7ab0;border-radius:7px;}"
         )
 
-        self.reconnect_btn = QPushButton("重新连接")
+        self.reconnect_btn = QPushButton("重连")
         self.reconnect_btn.setFixedSize(100, 32)
         self.reconnect_btn.setToolTip("通过 ADB 重新连接手机并拉取最新数据库")
         self.reconnect_btn.clicked.connect(self._auto_connect)
@@ -670,14 +715,14 @@ class MainWindow(QMainWindow):
         log_hdr.setFixedHeight(42)
         log_hdr.setObjectName("logHdr")
         log_hdr.setStyleSheet("QFrame#logHdr { border-bottom: 1px solid #2e4050; }")
-        _set_bg(log_hdr, 0x1e, 0x2a, 0x35)
+        _set_bg(log_hdr, 0x1E, 0x2A, 0x35)
 
         log_hdr_lay = QHBoxLayout(log_hdr)
         log_hdr_lay.setContentsMargins(12, 0, 8, 0)
         log_hdr_lay.setSpacing(6)
         log_title = QLabel("运行日志")
         log_title.setStyleSheet("font-weight:bold; font-size:10pt;")
-        clear_btn = QPushButton("清空日志")
+        clear_btn = QPushButton("清空")
         clear_btn.setFixedSize(80, 28)
         clear_btn.clicked.connect(lambda: self.log.clear_log())
         log_hdr_lay.addWidget(log_title)
@@ -701,7 +746,8 @@ class MainWindow(QMainWindow):
 
     def _show_help(self):
         QMessageBox.information(
-            self, "使用说明",
+            self,
+            "使用说明",
             "【EhViewer 漫画管理工具 使用流程】\n\n"
             "1. 用 USB 连接手机，确保已开启 ADB 调试\n"
             "   程序启动后自动连接并拉取数据库\n\n"
@@ -716,7 +762,7 @@ class MainWindow(QMainWindow):
             "   · 删除手机原文件: 移动成功后删除手机端\n"
             "   · 同步数据库: 清理已移走条目并推回手机\n\n"
             "4. 「文件名检查」可预览含 Windows 非法字符的\n"
-            "   目录名；执行移动时会自动净化"
+            "   目录名；执行移动时会自动净化",
         )
 
     # ── 连接 ────────────────────────────────────────────────
@@ -724,7 +770,9 @@ class MainWindow(QMainWindow):
     def _auto_connect(self):
         self._set_busy(True, "正在连接设备并拉取数据库…")
         self.conn_lbl.setText("● 连接中…")
-        self.conn_lbl.setStyleSheet("color:#f0c040; font-weight:bold; font-size:11pt; background:transparent;")
+        self.conn_lbl.setStyleSheet(
+            "color:#f0c040; font-weight:bold; font-size:11pt; background:transparent;"
+        )
         if self._manager:
             self._manager.cleanup()
             self._manager = None
@@ -740,14 +788,18 @@ class MainWindow(QMainWindow):
     def _on_connected(self, manager):
         self._manager = manager
         self.conn_lbl.setText(f"● 已连接:  {manager.adb.device_id}")
-        self.conn_lbl.setStyleSheet("color:#6fcf6f; font-weight:bold; font-size:11pt; background:transparent;")
+        self.conn_lbl.setStyleSheet(
+            "color:#6fcf6f; font-weight:bold; font-size:11pt; background:transparent;"
+        )
         self._set_busy(False)
         self.log.append_log("数据库拉取成功，可以开始操作。", "ok")
 
     @pyqtSlot(str)
     def _on_connect_error(self, msg):
         self.conn_lbl.setText("● 连接失败")
-        self.conn_lbl.setStyleSheet("color:#f07070; font-weight:bold; font-size:11pt; background:transparent;")
+        self.conn_lbl.setStyleSheet(
+            "color:#f07070; font-weight:bold; font-size:11pt; background:transparent;"
+        )
         self._set_busy(False)
         self.log.append_log(msg, "error")
 
@@ -801,7 +853,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot(object)
     def _on_move_done(self, summary: dict):
         self._set_busy(False)
-        moved  = len(summary.get("moved", []))
+        moved = len(summary.get("moved", []))
         failed = len(summary.get("failed", []))
         msg = f"移动完成: 成功 {moved}，失败 {failed}"
         self.log.append_log(f"\n{msg}", "ok" if failed == 0 else "warn")
@@ -838,6 +890,7 @@ class MainWindow(QMainWindow):
 # 入口
 # ---------------------------------------------------------------------------
 
+
 def run_gui():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
@@ -847,146 +900,20 @@ def run_gui():
 
     # 深色调色板
     pal = QPalette()
-    pal.setColor(QPalette.Window,          QColor(38,  38,  38))
-    pal.setColor(QPalette.WindowText,      QColor(220, 220, 220))
-    pal.setColor(QPalette.Base,            QColor(26,  26,  26))
-    pal.setColor(QPalette.AlternateBase,   QColor(34,  34,  34))
-    pal.setColor(QPalette.Text,            QColor(220, 220, 220))
-    pal.setColor(QPalette.Button,          QColor(52,  52,  52))
-    pal.setColor(QPalette.ButtonText,      QColor(220, 220, 220))
-    pal.setColor(QPalette.Highlight,       QColor(50,  100, 170))
+    pal.setColor(QPalette.Window, QColor(38, 38, 38))
+    pal.setColor(QPalette.WindowText, QColor(220, 220, 220))
+    pal.setColor(QPalette.Base, QColor(26, 26, 26))
+    pal.setColor(QPalette.AlternateBase, QColor(34, 34, 34))
+    pal.setColor(QPalette.Text, QColor(220, 220, 220))
+    pal.setColor(QPalette.Button, QColor(52, 52, 52))
+    pal.setColor(QPalette.ButtonText, QColor(220, 220, 220))
+    pal.setColor(QPalette.Highlight, QColor(50, 100, 170))
     pal.setColor(QPalette.HighlightedText, QColor(255, 255, 255))
-    pal.setColor(QPalette.ToolTipBase,     QColor(30,  45,  60))
-    pal.setColor(QPalette.ToolTipText,     QColor(210, 225, 240))
-    pal.setColor(QPalette.Mid,             QColor(55,  55,  55))
-    pal.setColor(QPalette.Dark,            QColor(20,  20,  20))
+    pal.setColor(QPalette.ToolTipBase, QColor(30, 45, 60))
+    pal.setColor(QPalette.ToolTipText, QColor(210, 225, 240))
+    pal.setColor(QPalette.Mid, QColor(55, 55, 55))
+    pal.setColor(QPalette.Dark, QColor(20, 20, 20))
     app.setPalette(pal)
-
-    app.setStyleSheet("""
-        QToolTip {
-            background: #1e3040;
-            color: #d0e8f8;
-            border: 1px solid #4080b0;
-            padding: 6px 10px;
-            font-size: 11pt;
-        }
-        QGroupBox {
-            font-weight: bold;
-            font-size: 11pt;
-            border: 1px solid #4a5a6a;
-            border-radius: 6px;
-            margin-top: 14px;
-            padding-top: 8px;
-            color: #dce8f4;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            subcontrol-position: top left;
-            left: 12px;
-            padding: 0 8px;
-            color: #dce8f4;
-            background: #262626;
-        }
-        QTabWidget::pane {
-            border: 1px solid #3a4a5a;
-            border-top: none;
-        }
-        QTabBar::tab {
-            background: #2a3a4a;
-            color: #a0b8c8;
-            padding: 9px 22px;
-            border-top-left-radius: 5px;
-            border-top-right-radius: 5px;
-            border: 1px solid #3a4a5a;
-            border-bottom: none;
-            margin-right: 3px;
-            font-size: 11pt;
-        }
-        QTabBar::tab:selected {
-            background: #2e3e50;
-            color: #e8f4ff;
-            border-bottom: 2px solid #5090c0;
-        }
-        QTabBar::tab:hover:!selected { background: #354555; color: #c8dce8; }
-        QPushButton {
-            background: #3a3a3a;
-            color: #e0e0e0;
-            border: 1px solid #505050;
-            border-radius: 5px;
-            padding: 6px 16px;
-            font-size: 11pt;
-        }
-        QPushButton:hover   { background: #4a5a68; border-color: #6090b8; color: #ffffff; }
-        QPushButton:pressed { background: #2a3a48; }
-        QPushButton:disabled{ background: #2a2a2a; color: #555; border-color: #3a3a3a; }
-        QLabel {
-            color: #dcdcdc;
-            font-size: 11pt;
-        }
-        QCheckBox {
-            color: #dcdcdc;
-            font-size: 11pt;
-            spacing: 8px;
-        }
-        QCheckBox::indicator {
-            width: 17px; height: 17px;
-            border: 1px solid #5a6a7a;
-            border-radius: 3px;
-            background: #2a2a2a;
-        }
-        QCheckBox::indicator:checked {
-            background: #3a7ab0;
-            border-color: #5090c0;
-        }
-        QLineEdit, QSpinBox, QDoubleSpinBox {
-            background: #222;
-            border: 1px solid #3a4a5a;
-            border-radius: 4px;
-            padding: 6px 10px;
-            min-height: 30px;
-            color: #e0e0e0;
-            font-size: 11pt;
-            selection-background-color: #3060a0;
-        }
-        QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
-            border-color: #5090c0;
-            border-width: 2px;
-        }
-        QSpinBox::up-button, QSpinBox::down-button,
-        QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-            background: #3a3a3a; border: none; width: 20px;
-        }
-        QTableWidget {
-            gridline-color: #2e3e4e;
-            border: 1px solid #3a4a5a;
-            font-size: 11pt;
-        }
-        QHeaderView::section {
-            background: #253545;
-            color: #b0cce0;
-            border: none;
-            border-right: 1px solid #3a4a5a;
-            border-bottom: 1px solid #3a4a5a;
-            padding: 7px 10px;
-            font-weight: bold;
-            font-size: 11pt;
-        }
-        QScrollBar:vertical {
-            background: #1e1e1e; width: 12px; margin: 0; border: none;
-        }
-        QScrollBar::handle:vertical {
-            background: #3a5060; border-radius: 6px; min-height: 28px;
-        }
-        QScrollBar::handle:vertical:hover { background: #507080; }
-        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-        QScrollBar:horizontal {
-            background: #1e1e1e; height: 12px; margin: 0; border: none;
-        }
-        QScrollBar::handle:horizontal {
-            background: #3a5060; border-radius: 6px; min-width: 28px;
-        }
-        QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
-    """)
 
     win = MainWindow()
     win.show()
